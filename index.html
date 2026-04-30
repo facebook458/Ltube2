@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Hub - User Panel</title>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+    <style>
+        /* RESET & BASE STYLES */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #121212;
+            color: #ffffff;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* LOADING SCREEN */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid #333;
+            border-top: 3px solid #00ff88;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* BOTTOM NAVIGATION */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1a1a1a;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            z-index: 1000;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.5);
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #888;
+            text-decoration: none;
+            padding: 8px;
+            transition: all 0.3s;
+            font-size: 10px;
+        }
+        .nav-item.active {
+            color: #00ff88;
+        }
+        .nav-item i {
+            font-size: 20px;
+            margin-bottom: 4px;
+        }
+
+        /* MAIN CONTENT */
+        .main-content {
+            padding-bottom: 80px;
+            min-height: 100vh;
+        }
+        .section {
+            display: none;
+            padding: 20px;
+        }
+        .section.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* HOME SECTION */
+        .home-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .home-card {
+            background: #1e1e1e;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+        .home-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,255,136,0.3);
+        }
+        .home-card img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+        }
+        .home-card h3 {
+            font-size: 14px;
+            padding: 12px;
+            font-weight: 600;
+        }
+
+        /* VIDEO SECTION */
+        .video-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .video-card {
+            background: #1e1e1e;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .video-card:hover {
+            transform: translateY(-5px);
+        }
+        .video-thumbnail {
+            position: relative;
+            width: 100%;
+            height: 180px;
+            background: #333;
+        }
+        .video-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .video-info {
+            padding: 15px;
+        }
+        .video-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .video-desc {
+            font-size: 14px;
+            color: #aaa;
+            margin-bottom: 10px;
+        }
+
+        /* VIDEO PLAYER MODAL */
+        .video-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 2000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        .video-modal.active {
+            display: flex;
+        }
+        .video-container {
+            position: relative;
+            width: 95%;
+            max-width: 800px;
+            height: 60vh;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .video-ad {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .skip-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,255,136,0.9);
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .skip-btn.show {
+            opacity: 1;
+        }
+        .main-video {
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+        .video-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            padding: 20px;
+        }
+
+        /* PHOTO SECTION */
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+        }
+        .photo-item {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .photo-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .photo-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 2000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        .photo-modal.active {
+            display: flex;
+        }
+        .photo-full {
+            max-width: 95%;
+            max-height: 95%;
+            object-fit: contain;
+            border-radius: 12px;
+        }
+
+        /* WEB LINKS */
+        .web-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .web-item {
+            background: #1e1e1e;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .web-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #00ff88, #00b8ff);
+        }
+        .web-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0,255,136,0.2);
+        }
+
+        /* COMMENT SECTION */
+        .comments-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: #1e1e1e;
+            border-radius: 12px;
+        }
+        .comment-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .comment-input input {
+            flex: 1;
+            background: #2a2a2a;
+            border: none;
+            padding: 15px;
+            border-radius: 25px;
+            color: #fff;
+            font-size: 16px;
+        }
+        .comment-input button {
+            background: #00ff88;
+            color: #000;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .comment-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .comment {
+            display: flex;
+            gap: 15px;
+            padding: 15px 0;
+            border-bottom: 1px solid #333;
+        }
+        .comment-avatar {
+            width: 40px;
+            height: 40px;
+            background: #00ff88;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+        .comment-content {
+            flex: 1;
+        }
+        .comment-author {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        .comment-text {
+            color: #ccc;
+        }
+
+        /* BANNER ADS */
+        .banner-ad {
+            margin: 20px 0;
+            text-align: center;
+            min-height: 100px;
+            background: #2a2a2a;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+        }
+
+        /* REWARD BUTTON */
+        .reward-btn {
+            background: linear-gradient(45deg, #00ff88, #00b8ff);
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 20px auto;
+            display: block;
+            transition: all 0.3s;
+        }
+        .reward-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .video-container {
+                height: 50vh;
+            }
+            .video-list {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- LOADING SCREEN -->
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+        <!-- HOME SECTION -->
+        <div class="section active" id="home">
+            <h2 style="margin-bottom: 20px; font-size: 24px;">Explore Content</h2>
+            <div class="home-grid" id="homeGrid"></div>
+        </div>
+
+        <!-- VIDEOS SECTION -->
+        <div class="section" id="videos">
+            <h2 style="margin-bottom: 20px; font-size: 24px;">Videos</h2>
+            <div class="video-list" id="videoList"></div>
+        </div>
+
+        <!-- PHOTOS SECTION -->
+        <div class="section" id="photos">
+            <h2 style="margin-bottom: 20px; font-size: 24px;">Photos</h2>
+            <div class="photo-grid" id="photoGrid"></div>
+        </div>
+
+        <!-- WEB LINKS SECTION -->
+        <div class="section" id="web">
+            <h2 style="margin-bottom: 20px; font-size: 24px;">Web Links</h2>
+            <div class="web-list" id="webList"></div>
+            <div style="text-align: center; margin-top: 30px;">
+                <button class="reward-btn" onclick="showRewardAd()">💰 Watch & Earn</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTTOM NAVIGATION -->
+    <div class="bottom-nav">
+        <a href="#" class="nav-item active" data-section="home">
+            <i>🏠</i><span>Home</span>
+        </a>
+        <a href="#" class="nav-item" data-section="videos">
+            <i>🎥</i><span>Videos</span>
+        </a>
+        <a href="#" class="nav-item" data-section="photos">
+            <i>🖼️</i><span>Photos</span>
+        </a>
+        <a href="#" class="nav-item" data-section="web">
+            <i>🌐</i><span>Web</span>
+        </a>
+    </div>
+
+    <!-- VIDEO MODAL -->
+    <div class="video-modal" id="videoModal">
+        <div class="video-container">
+            <!-- AD VIDEO -->
+            <video class="video-ad" id="adVideo" preload="auto"></video>
+            <button class="skip-btn" id="skipBtn" onclick="skipAd()">Skip Ad (5s)</button>
+            
+            <!-- MAIN VIDEO -->
+            <video class="main-video" id="mainVideo" controls preload="auto"></video>
+            
+            <div class="video-controls">
+                <div id="videoTitle"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PHOTO MODAL -->
+    <div class="photo-modal" id="photoModal">
+        <img id="photoFull" class="photo-full" src="" alt="">
+    </div>
+
+    <!-- COMMENTS MODAL -->
+    <div class="comments-section" id="commentsSection" style="display: none;">
+        <div class="comment-input">
+            <input type="text" id="commentInput" placeholder="Add a comment..." maxlength="200">
+            <button onclick="addComment()">Post</button>
+        </div>
+        <div class="comment-list" id="commentList"></div>
+    </div>
+
+    <!-- 🔥 ADS CONFIGURATION - PASTE YOUR AD SCRIPTS HERE -->
+    <script>
+        // ========================================
+        // 🔥 ADS CONFIG - PASTE YOUR SCRIPTS HERE
+        // ========================================
+        const ADS = {
+            // Banner Ad Script (300x250 or responsive)
+            banner: `
+                <!-- Monetag Banner -->
+                <script async src="https://monetag.com/SCRIPT_HERE"></script>
+                <!-- Adsterra Banner -->
+                <script type="text/javascript">
+                    atOptions = {
+                        'key' : 'YOUR_ADSTERRA_KEY',
+                        'format' : 'iframe',
+                        'height' : 250,
+                        'width' : 300,
+                        'params' : {}
+                    };
+                    document.write('<scr' + 'ipt type="text/javascript" src="http' + (location.protocol === 'https:' ? 's' : '') + '://YOUR_ADSTERRA_DOMAIN/YOUR_ID/invoke.js"></scr' + 'ipt>');
+                </script>
+            `,
+            
+            // Popup Ad Script
+            popup: `
+                <!-- Monetag Popup -->
+                <script type="text/javascript">
+                    (function(w,d,s,r,i){w[r]=w[r]||function(){(w[r].q=w[r].q||[]).push(arguments)};s=d.createElement('script');s.type='text/javascript';s.async=1;s.src="https://monetag.com/SCRIPT_HERE.js";d.getElementsByTagName('head')[0].appendChild(s);})(window,document,'_mtac_','Monetag');
+                </script>
+            `,
+            
+            // Video Ad URLs (MP4 files from your ad networks)
+            videoAds: [
+                'https://your-ad-network.com/video1.mp4',
+                'https://your-ad-network.com/video2.mp4'
+            ],
+            
+            // Reward Video (use your ad network SDK or iframe)
+            reward: `
+                <!-- Your Reward Ad Script -->
+                <div id="rewardAdContainer">
+                    <iframe src="https://your-reward-ad-url.com" width="100%" height="300"></iframe>
+                </div>
+            `
+        };
+    </script>
+
+    <script>
+        // ========================================
+        // 🔥 FIREBASE CONFIG - PASTE YOUR CONFIG HERE
+        // ========================================
+        const firebaseConfig = {
+            // PASTE YOUR FIREBASE CONFIG HERE
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+        const auth = firebase.auth();
+
+        // Global variables
+        let currentContentId = null;
+        let currentContentType = null;
+        let adSkipTimer = null;
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            initApp();
+            setupNavigation();
+            loadHomeContent();
+            loadVideos();
+            loadPhotos();
+            loadWebLinks();
+        });
+
+        function initApp() {
+            setTimeout(() => {
+                document.getElementById('loading').style.opacity = '0';
+                setTimeout(() => document.getElementById('loading').style.display = 'none', 500);
+            }, 1500);
+
+            // Show popup ad on load
+            showPopupAd();
+        }
+
+        function setupNavigation() {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const section = item.dataset.section;
+                    
+                    // Update active nav
+                    document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                    item.classList.add('active');
+                    
+                    // Show section
+                    document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+                    document.getElementById(section).classList.add('active');
+                });
+            });
+        }
+
+        // HOME CONTENT
+        async function loadHomeContent() {
+            const homeGrid = document.getElementById('homeGrid');
+            const sections = [
+                { title: 'Latest Videos', type: 'videos', icon: '🎥', section: 'videos' },
+                { title: 'New Photos', type: 'photos', icon: '🖼️', section: 'photos' },
+                { title: 'Web Links', type: 'web_links', icon: '🌐', section: 'web' }
+            ];
+
+            homeGrid.innerHTML = sections.map(sec => `
+                <div class="home-card" onclick="switchToSection('${sec.section}')">
+                    <div style="height: 120px; background: linear-gradient(45deg, #${Math.floor(Math.random()*16777215).toString(16)}, #${Math.floor(Math.random()*16777215).toString(16)}); display: flex; align-items: center; justify-content: center; font-size: 32px;">
+                        ${sec.icon}
+                    </div>
+                    <h3>${sec.title}</h3>
+                </div>
+            `).join('');
+        }
+
+        function switchToSection(section) {
+            document.querySelector(`[data-section="${section}"]`).click();
+        }
+
+        // VIDEOS
+        async function loadVideos() {
+            const videoList = document.getElementById('videoList');
+            try {
+                const snapshot = await db.collection('videos').orderBy('timestamp', 'desc').limit(20).get();
+                videoList.innerHTML = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return `
+                        <div class="video-card" onclick="playVideo('${doc.id}', '${data.videoUrl}', '${data.thumbnail}', '${data.title.replace(/'/g, "\\'")}')">
+                            <div class="video-thumbnail">
+                                <img src="${data.thumbnail}" alt="${data.title}">
+                            </div>
+                            <div class="video-info">
+                                <div class="video-title">${data.title}</div>
+                                <div class="video-desc">${data.description}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error loading videos:', error);
+            }
+        }
+
+        function playVideo(id, videoUrl, thumbnail, title) {
+            currentContentId = id;
+            currentContentType = 'videos';
+            
+            const modal = document.getElementById('videoModal');
+            const adVideo = document.getElementById('adVideo');
+            const mainVideo = document.getElementById('mainVideo');
+            const videoTitle = document.getElementById('videoTitle');
+            const skipBtn = document.getElementById('skipBtn');
+            
+            // Reset
+            mainVideo.style.display = 'none';
+            adVideo.style.display = 'block';
+            skipBtn.classList.remove('show');
+            
+            // Set title
+            videoTitle.textContent = title;
+            
+            // Load random video ad
+            const randomAd = ADS.videoAds[Math.floor(Math.random() * ADS.videoAds.length)];
+            adVideo.src = randomAd || 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4';
+            
+            // Play ad
+            adVideo.play();
+            modal.classList.add('active');
+            
+            // Skip timer
+            let skipTime = 5;
+            skipBtn.textContent = `Skip Ad (${skipTime}s)`;
+            adSkipTimer = setInterval(() => {
+                skipTime--;
+                skipBtn.textContent = `Skip Ad (${skipTime}s)`;
+                if (skipTime <= 0) {
+                    skipBtn.classList.add('show');
+                    clearInterval(adSkipTimer);
+                }
+            }, 1000);
+            
+            // Show comments
+            document.getElementById('commentsSection').style.display = 'block';
+            loadComments('videos', id);
+        }
+
+        function skipAd() {
+            if (adSkipTimer) {
+                clearInterval(adSkipTimer);
+                adSkipTimer = null;
+            }
+            
+            const adVideo = document.getElementById('adVideo');
+            const mainVideo = document.getElementById('mainVideo');
+            
+            adVideo.style.display = 'none';
+            mainVideo.src = currentVideoUrl; // Set from global var or pass as param
+            mainVideo.style.display = 'block';
+            mainVideo.play();
+        }
+
+        // PHOTOS
+        async function loadPhotos() {
+            const photoGrid = document.getElementById('photoGrid');
+            try {
+                const snapshot = await db.collection('photos').orderBy('timestamp', 'desc').limit(50).get();
+                photoGrid.innerHTML = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return `
+                        <div class="photo-item" onclick="showPhoto('${data.imageUrl}', '${doc.id}')">
+                            <img src="${data.imageUrl}" alt="${data.title}">
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error loading photos:', error);
+            }
+        }
+
+        function showPhoto(imageUrl, id) {
+            currentContentId = id;
+            currentContentType = 'photos';
+            document.getElementById('photoFull').src = imageUrl;
+            document.getElementById('photoModal').classList.add('active');
+            document.getElementById('commentsSection').style.display = 'block';
+            loadComments('photos', id);
+        }
+
+        // WEB LINKS
+        async function loadWebLinks() {
+            const webList = document.getElementById('webList');
+            try {
+                const snapshot = await db.collection('web_links').orderBy('timestamp', 'desc').get();
+                webList.innerHTML = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return `
+                        <div class="web-item" onclick="visitLink('${data.url}', '${doc.id}')">
+                            <h3 style="font-size: 18px; margin-bottom: 8px;">${data.title}</h3>
+                            <p style="color: #aaa; font-size: 14px;">${data.description}</p>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error loading web links:', error);
+            }
+        }
+
+        function visitLink(url, id) {
+            currentContentId = id;
+            currentContentType = 'web_links';
+            
+            // Show popup ad first
+            showPopupAd();
+            
+            // Redirect after 2 seconds
+            setTimeout(() => {
+                window.open(url, '_blank');
+                loadComments('web_links', id);
+            }, 2000);
+        }
+
+        // COMMENTS SYSTEM
+        async function loadComments(type, contentId) {
+            const commentList = document.getElementById('commentList');
+            try {
+                const snapshot = await db.collection('comments')
+                    .where('contentType', '==', type)
+                    .where('contentId', '==', contentId)
+                    .orderBy('timestamp', 'desc')
+                    .limit(50)
+                    .get();
+                
+                commentList.innerHTML = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return `
+                        <div class="comment">
+                            <div class="comment-avatar">${data.author?.charAt(0).toUpperCase() || 'U'}</div>
+                            <div class="comment-content">
+                                <div class="comment-author">${data.author || 'Anonymous'}</div>
+                                <div class="comment-text">${data.text}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error loading comments:', error);
+            }
+        }
+
+        async function addComment() {
+            const input = document.getElementById('commentInput');
+            const text = input.value.trim();
+            if (!text || !currentContentId || !currentContentType) return;
+
+            try {
+                await db.collection('comments').add({
+                    contentType: currentContentType,
+                    contentId: currentContentId,
+                    text: text,
+                    author: 'User', // You can get from auth
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                input.value = '';
+            } catch (error) {
+                console.error('Error adding comment:', error);
+            }
+        }
+
+        // AD FUNCTIONS
+        function showPopupAd() {
+            // Inject popup ad script
+            const script = document.createElement('script');
+            script.innerHTML = ADS.popup;
+            document.head.appendChild(script);
+        }
+
+        function showRewardAd() {
+            // Show reward ad
+            alert('Reward video ad would play here! 💰');
+            showPopupAd();
+        }
+
+        // Modal close handlers
+        document.getElementById('videoModal').addEventListener('click', (e) => {
+            if (e.target.classList.contains('video-modal')) {
+                e.target.classList.remove('active');
+                document.getElementById('commentsSection').style.display = 'none';
+                if (adSkipTimer) clearInterval(adSkipTimer);
+            }
+        });
+
+        document.getElementById('photoModal').addEventListener('click', (e) => {
+            if (e.target.classList.contains('photo-modal')) {
+                e.target.classList.remove('active');
+                document.getElementById('commentsSection').style.display = 'none';
+            }
+        });
+
+        // Enter key for comments
+        document.getElementById('commentInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addComment();
+        });
+
+        // Banner Ad injection points (add where needed)
+        function injectBannerAd(containerId) {
+            const container = document.getElementById(containerId);
+            if (container) {
+                container.innerHTML = `
+                    <div class="banner-ad">
+                        ${ADS.banner}
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
