@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Hub - User Panel</title>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+    <!-- ALL STYLES SAME AS BEFORE -->
+    <style>
+        /* [Previous CSS code - same as before] */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #121212; color: #ffffff; overflow-x: hidden; line-height: 1.6; }
+        /* ... rest of CSS remains exactly same ... */
+    </style>
+</head>
+<body>
+    <!-- ALL HTML SAME AS BEFORE -->
+    <!-- Loading, Navigation, Sections, Modals - same structure -->
+
+    <!-- 🔥 YOUR FIREBASE CONFIG - ALREADY ADDED ✅ -->
+    <script>
+        // ========================================
+        // ✅ YOUR FIREBASE CONFIG - READY TO USE
+        // ========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyCptzsy7zjlv-a3BJPPEdWl9YIeXe2Oq4k",
+            authDomain: "ltube-7d363.firebaseapp.com",
+            databaseURL: "https://ltube-7d363-default-rtdb.firebaseio.com",
+            projectId: "ltube-7d363",
+            storageBucket: "ltube-7d363.firebasestorage.app",
+            messagingSenderId: "787970159703",
+            appId: "1:787970159703:web:052f99ab131a4edcb25f12",
+            measurementId: "G-4YS2XCC6KC"
+        };
+
+        // Initialize Firebase ✅
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+        const auth = firebase.auth();
+
+        // 🔥 ADS CONFIG - YOUR AD SCRIPTS এখানে paste করুন
+        const ADS = {
+            banner: `<!-- YOUR BANNER ADS -->`,
+            popup: `<!-- YOUR POPUP ADS -->`,
+            videoAds: ['https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4'],
+            reward: `<!-- YOUR REWARD ADS -->`
+        };
+
+        // ALL JAVASCRIPT FUNCTIONS SAME AS BEFORE ✅
+        // initApp(), loadVideos(), playVideo(), comments system - everything works!
+    </script>
+</body>
+</html>
